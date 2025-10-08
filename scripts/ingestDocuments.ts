@@ -83,30 +83,35 @@ async function ingestDocuments() {
       console.log(`  - Created ${chunks.length} chunks`);
 
       // Generate embeddings using Gemini
-      let embeddings;
+
+      let allEmbeddings: any[] = [];
+      const batchSize = 100;
       try {
-        const result = await embedMany({
-          values: chunks.map(chunk => chunk.text),
-          model: google.textEmbeddingModel('text-embedding-004'),
-        });
-        embeddings = result.embeddings;
+        for (let i = 0; i < chunks.length; i += batchSize) {
+          const batch = chunks.slice(i, i + batchSize);
+          const result = await embedMany({
+            values: batch.map(chunk => chunk.text),
+            model: google.textEmbeddingModel('text-embedding-004'),
+          });
+          allEmbeddings.push(...result.embeddings);
+        }
       } catch (err) {
         console.error(`  ❌ Error generating embeddings for ${pdfFile}:`, err);
         continue;
       }
 
-      if (!embeddings || embeddings.length !== chunks.length) {
+      if (!allEmbeddings || allEmbeddings.length !== chunks.length) {
         console.error(`  ❌ Embedding count mismatch for ${pdfFile}`);
         continue;
       }
 
-      console.log(`  - Generated ${embeddings.length} embeddings`);
+      console.log(`  - Generated ${allEmbeddings.length} embeddings`);
 
       // Store in vector database
       try {
         await pgVector.upsert({
           indexName: 'berkshire_letters',
-          vectors: embeddings.map((embedding, i) => embedding),
+          vectors: allEmbeddings.map((embedding, i) => embedding),
           ids: chunks.map((_, i) => `${pdfFile}-chunk-${i}`),
           metadata: chunks.map((chunk, i) => ({
             text: chunk.text,
