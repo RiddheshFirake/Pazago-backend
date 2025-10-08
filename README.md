@@ -44,14 +44,17 @@ berkshire-rag-app/
    - Set your PostgreSQL connection string in `.env` or as an environment variable.
 3. **Ingest documents:**
    ```powershell
-   npx ts-node scripts/ingestDocuments.ts
+   npm run ingest
    ```
-4. **Run tests:**
+4. **Start Mastra development server and UI:**
+   ```powershell
+   npm run dev
+   ```
+   - This launches the Mastra UI for semantic search and Q&A.
+5. **Run tests:**
    ```powershell
    node --experimental-vm-modules ./node_modules/jest/bin/jest.js
    ```
-5. **Use Mastra UI:**
-   - Access semantic search and Q&A via Mastra's built-in UI.
 
 ## Assignment Coverage
 This project fulfills the Pazago RAG assignment requirements:
