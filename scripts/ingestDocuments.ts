@@ -29,55 +29,101 @@ async function ingestDocuments() {
 
   for (const pdfFile of pdfFiles) {
     console.log(`Processing: ${pdfFile}...`);
-    
-    const pdfPath = path.join(documentsPath, pdfFile);
-    const pdfBuffer = fs.readFileSync(pdfPath);
+    try {
+      const pdfPath = path.join(documentsPath, pdfFile);
+      let pdfBuffer;
+      try {
+        pdfBuffer = fs.readFileSync(pdfPath);
+      } catch (err) {
+        console.error(`  ❌ Error reading file ${pdfFile}:`, err);
+        continue;
+      }
 
-    // Extract text from PDF
-    const pdfData = await pdfParse(pdfBuffer);
-    const text = pdfData.text;
+      // Extract text from PDF
+      let pdfData, text;
+      try {
+        pdfData = await pdfParse(pdfBuffer);
+        text = pdfData.text;
+      } catch (err) {
+        console.error(`  ❌ Error parsing PDF ${pdfFile}:`, err);
+        continue;
+      }
 
-    console.log(`  - Extracted ${text.length} characters`);
+      if (!text || text.length === 0) {
+        console.warn(`  ⚠️ No text extracted from ${pdfFile}`);
+        continue;
+      }
 
-    // Create document and chunk it
-    const doc = MDocument.fromText(text, {
-      metadata: {
-        source: pdfFile,
-        year: extractYear(pdfFile),
-      },
-    });
+      console.log(`  - Extracted ${text.length} characters`);
 
-    const chunks = await doc.chunk({
-        strategy: 'recursive',
-        maxSize: 800,  // ← Use maxSize instead
-        overlap: 100,
-    });
+      // Create document and chunk it
+      let doc, chunks;
+      try {
+        doc = MDocument.fromText(text, {
+          metadata: {
+            source: pdfFile,
+            year: extractYear(pdfFile),
+          },
+        });
+        chunks = await doc.chunk({
+          strategy: 'recursive',
+          maxSize: 800,
+          overlap: 100,
+        });
+      } catch (err) {
+        console.error(`  ❌ Error chunking document for ${pdfFile}:`, err);
+        continue;
+      }
 
+      if (!chunks || chunks.length === 0) {
+        console.warn(`  ⚠️ No chunks created for ${pdfFile}`);
+        continue;
+      }
 
-    console.log(`  - Created ${chunks.length} chunks`);
+      console.log(`  - Created ${chunks.length} chunks`);
 
-    // Generate embeddings using Gemini
-    const { embeddings } = await embedMany({
-      values: chunks.map(chunk => chunk.text),
-      model: google.textEmbeddingModel('text-embedding-004'),
-    });
+      // Generate embeddings using Gemini
+      let embeddings;
+      try {
+        const result = await embedMany({
+          values: chunks.map(chunk => chunk.text),
+          model: google.textEmbeddingModel('text-embedding-004'),
+        });
+        embeddings = result.embeddings;
+      } catch (err) {
+        console.error(`  ❌ Error generating embeddings for ${pdfFile}:`, err);
+        continue;
+      }
 
-    console.log(`  - Generated ${embeddings.length} embeddings`);
+      if (!embeddings || embeddings.length !== chunks.length) {
+        console.error(`  ❌ Embedding count mismatch for ${pdfFile}`);
+        continue;
+      }
 
-    // Store in vector database
-    await pgVector.upsert({
-      indexName: 'berkshire_letters',
-      vectors: embeddings.map((embedding, i) => embedding),
-      ids: chunks.map((_, i) => `${pdfFile}-chunk-${i}`),
-      metadata: chunks.map((chunk, i) => ({
-        text: chunk.text,
-        source: pdfFile,
-        year: extractYear(pdfFile),
-        chunkIndex: i,
-      })),
-    });
+      console.log(`  - Generated ${embeddings.length} embeddings`);
 
-    console.log(`  ✅ Stored in database\n`);
+      // Store in vector database
+      try {
+        await pgVector.upsert({
+          indexName: 'berkshire_letters',
+          vectors: embeddings.map((embedding, i) => embedding),
+          ids: chunks.map((_, i) => `${pdfFile}-chunk-${i}`),
+          metadata: chunks.map((chunk, i) => ({
+            text: chunk.text,
+            source: pdfFile,
+            year: extractYear(pdfFile),
+            chunkIndex: i,
+          })),
+        });
+        console.log(`  ✅ Stored in database\n`);
+      } catch (err) {
+        console.error(`  ❌ Error storing embeddings for ${pdfFile}:`, err);
+        continue;
+      }
+    } catch (err) {
+      console.error(`  ❌ Unexpected error processing ${pdfFile}:`, err);
+      continue;
+    }
   }
 
   console.log('🎉 Document ingestion complete!');
