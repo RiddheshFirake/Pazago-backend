@@ -3,7 +3,7 @@ config(); // Load environment variables
 
 import { MDocument } from '@mastra/rag';
 import { embedMany } from 'ai';
-import { google } from '@ai-sdk/google';
+import { openai } from '@ai-sdk/openai';
 import { PgVector } from '@mastra/pg';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -91,7 +91,7 @@ async function ingestDocuments() {
           const batch = chunks.slice(i, i + batchSize);
           const result = await embedMany({
             values: batch.map(chunk => chunk.text),
-            model: google.textEmbeddingModel('text-embedding-004'),
+        model: openai.textEmbeddingModel('text-embedding-ada-002'),
           });
           allEmbeddings.push(...result.embeddings);
         }

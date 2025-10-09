@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "mastra dev",
     "build": "mastra build",
-  "start": "mastra dev",
+    "start": "mastra dev",
     "ingest": "tsx scripts/ingestDocuments.ts",
     "setup-db": "tsx scripts/setupDatabase.ts"
   },
@@ -29,6 +29,7 @@
     "ai": "^5.0.60",
     "dotenv": "^17.2.3",
     "pdf-parse": "^2.2.2",
+    "pg": "^8.16.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {

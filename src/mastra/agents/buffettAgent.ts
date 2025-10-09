@@ -1,12 +1,12 @@
 import { Agent } from '@mastra/core';
 import { createVectorQueryTool } from '@mastra/rag';
-import { google } from '@ai-sdk/google';
+import { openai } from '@ai-sdk/openai';
 
 // Create vector search tool for querying Berkshire letters
 const vectorQueryTool = createVectorQueryTool({
   vectorStoreName: 'pgVector',
   indexName: 'berkshire_letters',
-  model: google.textEmbeddingModel('text-embedding-004'),
+  model: openai.textEmbeddingModel('text-embedding-ada-002'),
 });
 
 export const buffettAgent = new Agent({
@@ -35,7 +35,7 @@ Response Format:
 
 Remember: Your authority comes from the shareholder letters. Stay grounded in this source material and be transparent about the scope and limitations of your knowledge.`,
   
-  model: 'google/gemini-2.0-flash-exp', // Using Gemini Flash for speed
+  model: 'openai/gpt-3.5-turbo', // Using OpenAI GPT-3.5 Turbo
   
   tools: {
     vectorQueryTool,
