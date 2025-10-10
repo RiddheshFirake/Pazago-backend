@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.17",
+    "@ai-sdk/openai": "^2.0.48",
     "@mastra/core": "^0.20.1",
     "@mastra/libsql": "^0.15.1",
     "@mastra/loggers": "^0.10.15",
